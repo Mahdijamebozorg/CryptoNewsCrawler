@@ -1,51 +1,38 @@
-import requests
 from bs4 import BeautifulSoup
 import time
 import dateparser
+import urllib.request
 import utills as utills
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
 import csv
 from datetime import datetime
 
 # ------------------------------------------------------------
-def get_coinmarketcap_article_selenium(url,waiting_time=2):
-    options = Options()
-    options.headless = True  # Run headlessly
-    service = Service('chromedriver.exe')  # Update with your path to chromedriver
-
-    driver = webdriver.Chrome(service=service, options=options)
-    driver.get(url)
-
+# crawl article
+def get_cointelegraph_article(url):
     try:
-        # Scroll down to load all dynamic content
-        driver.execute_script("window.scrollTo(0, 800)")
-        time.sleep(waiting_time)
-
-        # Extract content using Selenium
-        soup = BeautifulSoup(driver.page_source, 'lxml')
-        driver.quit()
-
-        title_tag = soup.find('h1')
-        date_span = soup.find('span', class_='sc-6249f85d-5 dwOmQo')
+        req = urllib.request.Request(url)
+        req.add_header(key='User-Agent', val=utills.random_agent())
+        r = urllib.request.urlopen(req).read().decode('utf-8')
+        soup = BeautifulSoup(r, 'lxml')
 
         # Check if title and date exist
+        title_tag = soup.find('h1')
         if title_tag:
             title = title_tag.text.strip()
         else:
             print(f"Missing title in article at {url}")
             return None
-        
-        if date_span:
-            date_text = date_span.text.strip()
-            date = dateparser.parse(date_text)  # Use dateparser to parse relative time
+
+        date = soup.find('time')
+        if date:
+            date = date.text.strip()
+            date = dateparser.parse(date)
         else:
             print(f"Missing date in article at {url}")
             return None
-        
+
         # Extract article content correctly
-        article_tag = soup.find('article', class_='sc-65e7f566-0 sc-6249f85d-0 ktlJNL ewhPlu')
+        article_tag = soup.find('div', class_='post-content relative')
         if article_tag:
             content_elements = article_tag.find_all(['div','p','h2','h3','a'])
             if content_elements:
@@ -59,20 +46,19 @@ def get_coinmarketcap_article_selenium(url,waiting_time=2):
 
         print(f'parsed: title: {title}: url: {url}, date: {date}, content: {content}')
         return {'title': title,'url': url,'date': date,'content': content}
-    
+
     except Exception as e:
         print(e)
-        driver.quit()
         return None
 
-
 # ------------------------------------------------------------
-def save_article_to_csv(article, filename):
+# save to csv
+def save_article_to_csv(article, dir):
     # Define the CSV file headers
     fieldnames = ['title', 'url', 'date', 'content']
 
     # Open the CSV file for writing
-    with open(filename, mode='a', newline='', encoding='utf-8') as csvfile:
+    with open(dir, mode='a', newline='', encoding='utf-8') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
         # Write the header row
@@ -84,48 +70,40 @@ def save_article_to_csv(article, filename):
 
         writer.writerow(article)
 
-
 # ------------------------------------------------------------
-def crawl(output_dir, waiting_time=2):
-    base_url = "https://coinmarketcap.com"
-    sub_url = base_url + "/sitemap/community-articles/"
-    
+# Find all article links
+def crawl(output_dir):
+    base_url = "http://cointelegraph.com"
+    sub_url = base_url + "/post-sitemap"
     page_number = 1
-
     while True:
         try:
-            print(f"Fetching page {page_number}")
-            headers = {'User-Agent':utills.random_agent()}
-            response = requests.get(f"{sub_url}?page={page_number}", headers=headers, verify=False)
-            response.raise_for_status()  # Raise an exception for HTTP errors
-            soup = BeautifulSoup(response.content, 'lxml')
-
+            req = urllib.request.Request(f"{sub_url}-{page_number}")
+            req.add_header(key='User-Agent', val=utills.random_agent())
+            r = urllib.request.urlopen(req).read().decode('utf-8')
+            soup = BeautifulSoup(r, 'xml')
             # Find all article links
             links_found = 0
-            for link in soup.find_all('a', href=True):
-                href = link['href']
-                if '/community/articles/' in href:
-                    links_found += 1
+            for link in soup.find_all('loc'):
+                href = link.get_text()
+                if 'news' in href:
                     # Construct the full URL if it's a relative URL
                     article_url = href if href.startswith('http') else base_url + href
-                    article_info = get_coinmarketcap_article_selenium(article_url,waiting_time)
+                    links_found += 1
+                    article_info = get_cointelegraph_article(article_url)
                     if article_info:
-                        save_article_to_csv(article_info,output_dir)        
-
-
+                        save_article_to_csv(article_info, output_dir)
             if links_found == 0:
                 # No more articles found, break out of the loop
                 break
 
             page_number += 1
             time.sleep(10)  # Pause between requests to avoid rate-limiting
-
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             print(f"An error occurred: {e}")
             time.sleep(10)  # Exponential backoff
             continue
 
-
-
+# ------------------------------------------------------------
 if __name__ == "__main__":
-    coinmarketcap_articles = crawl("articles.csv")
+    cointelegraph_articles = crawl("articles.csv")
