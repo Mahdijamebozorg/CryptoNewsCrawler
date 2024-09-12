@@ -6,10 +6,11 @@ import utills as utills
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
-import csv
 from datetime import datetime
+from queue import Queue
 
 # ------------------------------------------------------------
+# crawl article
 def get_coinmarketcap_article_selenium(url,waiting_time=2):
     options = Options()
     options.headless = True  # Run headlessly
@@ -57,7 +58,7 @@ def get_coinmarketcap_article_selenium(url,waiting_time=2):
             print(f"Missing article content in article at {url}")
             return None
 
-        print(f'parsed: title: {title}: url: {url}, date: {date}, content: {content}')
+        print(f'parsed: url: {url}, date: {date}')
         return {'title': title,'url': url,'date': date,'content': content}
     
     except Exception as e:
@@ -65,28 +66,9 @@ def get_coinmarketcap_article_selenium(url,waiting_time=2):
         driver.quit()
         return None
 
-
 # ------------------------------------------------------------
-def save_article_to_csv(article, filename):
-    # Define the CSV file headers
-    fieldnames = ['title', 'url', 'date', 'content']
-
-    # Open the CSV file for writing
-    with open(filename, mode='a', newline='', encoding='utf-8') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-        # Write the header row
-        writer.writeheader()
-
-        # Convert the date to string format if it's a datetime object
-        if isinstance(article['date'], datetime):
-                article['date'] = article['date'].strftime('%Y-%m-%d %H:%M:%S')
-
-        writer.writerow(article)
-
-
-# ------------------------------------------------------------
-def crawl(output_dir, waiting_time=2):
+# Find all article links
+def crawl(waiting_time:int, file_queue:Queue):
     base_url = "https://coinmarketcap.com"
     sub_url = base_url + "/sitemap/community-articles/"
     
@@ -110,8 +92,10 @@ def crawl(output_dir, waiting_time=2):
                     article_url = href if href.startswith('http') else base_url + href
                     article_info = get_coinmarketcap_article_selenium(article_url,waiting_time)
                     if article_info:
-                        save_article_to_csv(article_info,output_dir)        
-
+                        if isinstance(article_info['date'], datetime):
+                            article_info['date'] = article_info['date'].strftime('%Y-%m-%d %H:%M:%S')
+                        file_queue.put(article_info)
+                        # save_article_to_csv(article_info,output_dir)        
 
             if links_found == 0:
                 # No more articles found, break out of the loop
@@ -120,12 +104,14 @@ def crawl(output_dir, waiting_time=2):
             page_number += 1
             time.sleep(10)  # Pause between requests to avoid rate-limiting
 
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             print(f"An error occurred: {e}")
             time.sleep(10)  # Exponential backoff
             continue
 
-
-
+# ------------------------------------------------------------
 if __name__ == "__main__":
-    coinmarketcap_articles = crawl("articles.csv")
+    queue = Queue() 
+    coinmarketcap_articles = crawl(5,queue)
+    while not queue.empty():
+        utills.save_article_to_csv(queue.get(), "output.csv")

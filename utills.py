@@ -1,4 +1,5 @@
 import random
+import csv
 
 def random_agent():
     user_agents = [
@@ -8,3 +9,12 @@ def random_agent():
         'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36'
     ]
     return random.choice(user_agents)
+
+def save_article_to_csv(article, filename):
+    # Define the CSV file headers
+    fieldnames = ['title', 'url', 'date', 'content']
+    # Open the CSV file for writing
+    with open(filename, mode='a', newline='', encoding='utf-8') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerow(article)
