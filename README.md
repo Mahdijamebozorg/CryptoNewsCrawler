@@ -25,4 +25,4 @@ This simple project consists of an end-to-end AI pipeline that performs technica
 </a>
 
 
-### 👉 this is just a demo,asking to design a more complex and sophisticated version of this project,  please message me: at mohsen.hamiii@gmail.com
+### 👉 this is just a demo,asking to design a more complex and sophisticated version of this project,  please message me: at mahdijamebozorg2000@gmail.com
