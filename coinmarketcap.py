@@ -29,7 +29,7 @@ def get_coinmarketcap_article_selenium(url,waiting_time=2):
         driver.quit()
 
         title_tag = soup.find('h1')
-        date_span = soup.find('span', class_='sc-6249f85d-5 dwOmQo')
+        date_span = soup.find('span', class_='sc-e4104025-5 cpMPMB')
 
         # Check if title and date exist
         if title_tag:
@@ -46,7 +46,7 @@ def get_coinmarketcap_article_selenium(url,waiting_time=2):
             return None
         
         # Extract article content correctly
-        article_tag = soup.find('article', class_='sc-65e7f566-0 sc-6249f85d-0 ktlJNL ewhPlu')
+        article_tag = soup.find('article', class_='sc-65e7f566-0 sc-e4104025-0 ktlJNL wuWsT')
         if article_tag:
             content_elements = article_tag.find_all(['div','p','h2','h3','a'])
             if content_elements:
@@ -95,7 +95,7 @@ def crawl(waiting_time:int, file_queue:Queue):
                         if isinstance(article_info['date'], datetime):
                             article_info['date'] = article_info['date'].strftime('%Y-%m-%d %H:%M:%S')
                         file_queue.put(article_info)
-                        # save_article_to_csv(article_info,output_dir)        
+                        # save_article_to_csv(article_info,output_dir)     
 
             if links_found == 0:
                 # No more articles found, break out of the loop

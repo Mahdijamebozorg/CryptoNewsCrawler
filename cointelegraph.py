@@ -55,11 +55,11 @@ def get_cointelegraph_article(url):
 # Find all article links
 def crawl(file_queue:Queue):
     base_url = "http://cointelegraph.com"
-    sub_url = base_url + "/post-sitemap"
+    sub_url = base_url + "/sitemap/post"
     page_number = 1
     while True:
         try:
-            req = urllib.request.Request(f"{sub_url}-{page_number}")
+            req = urllib.request.Request(f"{sub_url}-{page_number}.xml")
             req.add_header(key='User-Agent', val=utills.random_agent())
             r = urllib.request.urlopen(req).read().decode('utf-8')
             soup = BeautifulSoup(r, 'xml')
