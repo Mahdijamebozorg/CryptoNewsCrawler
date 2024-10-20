@@ -1,5 +1,5 @@
 # Smart Crypto Crawler and Analyzer
-This simple project consists of an end-to-end AI pipeline that performs technical and fundamental analysis of different cryptocurrency
+An end-to-end AI pipeline that performs technical and fundamental analysis of different cryptocurrency
 
 ## 🟢 Phase 1:
 #### We have designed two end-to-end crawlers using selenium  for fetching the latest news from Coinmarketcap.com and Cointelegraph.com websites 
